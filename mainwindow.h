@@ -40,10 +40,15 @@ private slots:
     void on_actionSettings_triggered();
     void on_actionRegisterLogo_triggered();
 
+    void on_actionRun_triggered();
+
 private:
     Ui::MainWindow *ui;
     AddLogo * addLogo;
     Settings * settings;
+    bool match(Mat obj, Mat scene);
+    bool match(QString obj, QString scene);
+    QString imagesFolder, brandsFolder;
 };
 
 #endif // MAINWINDOW_H
