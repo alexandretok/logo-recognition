@@ -1,11 +1,13 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <opencv2/xfeatures2d.hpp>
-#include <QDebug>
-
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow){
     ui->setupUi(this);
+
+    /* Creating default folders */
+    if(!QDir("brands").exists()){
+        QDir().mkdir("brands");
+    }
 
     namedWindow("img", WINDOW_NORMAL);
 
@@ -107,9 +109,16 @@ MainWindow::~MainWindow(){
 }
 
 void MainWindow::on_actionSetImagesFolder_triggered(){
-
+    QString folder = QFileDialog::getExistingDirectory();
+    qDebug() << folder;
 }
 
 void MainWindow::on_actionSettings_triggered(){
+    settings = new Settings(this);
+    settings->show();
+}
 
+void MainWindow::on_actionRegisterLogo_triggered(){
+    addLogo = new AddLogo(this);
+    addLogo->show();
 }
