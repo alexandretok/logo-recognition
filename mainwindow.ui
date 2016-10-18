@@ -41,8 +41,8 @@
      <italic>true</italic>
     </font>
    </property>
-   <property name="layoutDirection">
-    <enum>Qt::LeftToRight</enum>
+   <property name="contextMenuPolicy">
+    <enum>Qt::PreventContextMenu</enum>
    </property>
    <property name="movable">
     <bool>false</bool>
