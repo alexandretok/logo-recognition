@@ -16,7 +16,7 @@
 #include <opencv2/xfeatures2d.hpp>
 
 namespace Ui {
-class AddLogo;
+    class AddLogo;
 }
 
 class AddLogo : public QDialog
@@ -26,7 +26,6 @@ class AddLogo : public QDialog
 public:
     explicit AddLogo(QWidget *parent = 0);
     ~AddLogo();
-    bool addLogo(int brandID, QString imgPath,QString outputFilePath);
 
 private slots:
     void on_btCreateNew_clicked();
@@ -36,7 +35,6 @@ private slots:
 private:
     void updateBrands();
     Ui::AddLogo *ui;
-    void closeEvent(QCloseEvent *);
     QStringList files;
 };
 

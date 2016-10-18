@@ -3,7 +3,7 @@
 
 #include <QDirIterator>
 
-const QString MainWindow::FOLDER_BRANDS = "brands/";
+const QString MainWindow::FOLDER_BRANDS = "brands";
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow){
     ui->setupUi(this);
