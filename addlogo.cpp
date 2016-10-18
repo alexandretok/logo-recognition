@@ -1,13 +1,34 @@
 #include "addlogo.h"
 #include "ui_addlogo.h"
 
+#include "mainwindow.h"
+
 using namespace cv;
 using namespace std;
+
+#include <QDirIterator>
 
 AddLogo::AddLogo(QWidget *parent) : QDialog(parent), ui(new Ui::AddLogo) {
     ui->setupUi(this);
     ui->progressBar->setVisible(false);
     setFixedSize(this->geometry().size());
+
+    updateBrands();
+}
+
+void AddLogo::updateBrands(){
+    /* Clears combobox */
+    ui->comboBrand->clear();
+
+    /* Get added brands from folders */
+    QDirIterator brands(MainWindow::FOLDER_BRANDS, QDir::Dirs);
+    while(brands.hasNext()){
+        QString folder = brands.next().split("/")[1];
+        if(folder != ".." && folder != "."){
+            folder[0] = folder[0].toUpper();
+            ui->comboBrand->addItem(folder);
+        }
+    }
 }
 
 AddLogo::~AddLogo(){
@@ -41,7 +62,12 @@ bool AddLogo::addLogo(int brandID, QString imgPath, QString outputFilePath){
 
 void AddLogo::on_btCreateNew_clicked(){
     QString newBrand = QInputDialog::getText(this, "Creating new brand", "Name of the brand: ");
-    qDebug() << newBrand;
+    newBrand = newBrand.toLower();
+    if(!QDir("brands/" + newBrand).exists()){
+        QDir().mkdir("brands/" + newBrand);
+    }
+
+    updateBrands();
 }
 
 void AddLogo::on_btAdd_clicked(){

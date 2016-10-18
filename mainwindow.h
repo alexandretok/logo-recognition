@@ -6,6 +6,7 @@
 #include <QFileDialog>
 #include <QFileDialog>
 #include <QDebug>
+#include <QString>
 #include <QDir>
 
 #include <opencv2/core/core.hpp>
@@ -33,6 +34,7 @@ class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+    static const QString FOLDER_BRANDS;
 
 private slots:
 

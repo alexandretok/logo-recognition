@@ -34,6 +34,7 @@ private slots:
     void on_btSelectFiles_clicked();
 
 private:
+    void updateBrands();
     Ui::AddLogo *ui;
     void closeEvent(QCloseEvent *);
     QStringList files;

@@ -3,27 +3,27 @@
 
 #include <QDirIterator>
 
+const QString MainWindow::FOLDER_BRANDS = "brands/";
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow){
     ui->setupUi(this);
 
-    brandsFolder = "brands";
-
     /* Creating default folders */
-    if(!QDir(brandsFolder).exists()){
-        QDir().mkdir(brandsFolder);
+    if(!QDir(FOLDER_BRANDS).exists()){
+        QDir().mkdir(FOLDER_BRANDS);
     }
 
-    match("/home/alexandre/Desktop/Projects/logo-recognition/test-images/sony.jpg", "/home/alexandre/Desktop/Projects/logo-recognition/test-images/camera.jpg");
-    waitKey();
+//    match("/home/alexandre/projetos/logo-recognition/test-images/sony.jpg", "/home/alexandre/projetos/logo-recognition/test-images/camera.jpg");
+//    waitKey();
 
-    match("/home/alexandre/Desktop/Projects/logo-recognition/test-images/sony.jpg", "/home/alexandre/Desktop/Projects/logo-recognition/test-images/head.jpg");
-    waitKey();
+//    match("/home/alexandre/projetos/logo-recognition/test-images/sony.jpg", "/home/alexandre/projetos/logo-recognition/test-images/head.jpg");
+//    waitKey();
 
-    match("/home/alexandre/Desktop/Projects/logo-recognition/test-images/sony.jpg", "/home/alexandre/Desktop/Projects/logo-recognition/test-images/sony1.jpg");
-    waitKey();
+//    match("/home/alexandre/projetos/logo-recognition/test-images/sony.jpg", "/home/alexandre/projetos/logo-recognition/test-images/sony1.jpg");
+//    waitKey();
 
-    match("/home/alexandre/Desktop/Projects/logo-recognition/test-images/sony.jpg", "/home/alexandre/Desktop/Projects/logo-recognition/test-images/sony2.jpg");
-    waitKey();
+//    match("/home/alexandre/projetos/logo-recognition/test-images/sony.jpg", "/home/alexandre/projetos/logo-recognition/test-images/sony2.jpg");
+//    waitKey();
 }
 
 MainWindow::~MainWindow(){
@@ -145,7 +145,7 @@ void MainWindow::on_actionRegisterLogo_triggered(){
 }
 
 void MainWindow::on_actionRun_triggered(){
-    QDirIterator logos(brandsFolder);
+    QDirIterator logos(FOLDER_BRANDS);
     QDirIterator images(imagesFolder, QStringList() << "*.jpg" << "*.png");
     while(logos.hasNext()){
         qDebug() << logos.next();
