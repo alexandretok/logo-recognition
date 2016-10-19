@@ -48,7 +48,6 @@ private:
     Ui::MainWindow *ui;
     AddLogo * addLogo;
     Settings * settings;
-    bool match(Mat obj, Mat scene);
     bool match(QString obj, QString scene);
     QString imagesFolder, brandsFolder;
 };
