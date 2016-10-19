@@ -38,8 +38,8 @@ MainWindow::~MainWindow(){
 
 
 bool MainWindow::match(QString objPath, QString scenePath){
-    qDebug() << "processando: " << scenePath;
-    qDebug() << "logo: " << objPath;
+//    qDebug() << "processando: " << scenePath;
+//    qDebug() << "logo: " << objPath;
 
     bool match = true;
 
@@ -76,8 +76,8 @@ bool MainWindow::match(QString objPath, QString scenePath){
         if( dist > max_dist ) max_dist = dist;
     }
 
-    qDebug() << "max:" << max_dist;
-    qDebug() << "min:" << min_dist;
+//    qDebug() << "max:" << max_dist;
+//    qDebug() << "min:" << min_dist;
 
     //-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist,
     //-- or a small arbitary value ( 0.02 ) in the event that min_dist is very
@@ -91,7 +91,7 @@ bool MainWindow::match(QString objPath, QString scenePath){
         }
     }
 
-    drawMatches(obj, keypointsObject, scene, keypointsScene, good_matches, img_matches, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+//    drawMatches(obj, keypointsObject, scene, keypointsScene, good_matches, img_matches, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 //    imshow("img", img_matches);
 
 
@@ -110,7 +110,7 @@ bool MainWindow::match(QString objPath, QString scenePath){
           return false;
       }
 
-      qDebug() << "good matches: " << good_matches.size();
+//      qDebug() << "good matches: " << good_matches.size();
 
       Mat H = findHomography(objLoc, sceneLoc, RANSAC );
 
@@ -141,12 +141,12 @@ bool MainWindow::match(QString objPath, QString scenePath){
 //      qDebug() << logo_corners[2].x << logo_corners[2].y;
 //      qDebug() << logo_corners[3].x << logo_corners[3].y;
 
-      qDebug() << "POINT TEST: ";
+//      qDebug() << "POINT TEST: ";
 
-      qDebug() << pointPolygonTest(scene_corners, logo_corners[0], false)
-               << pointPolygonTest(scene_corners, logo_corners[1], false)
-               << pointPolygonTest(scene_corners, logo_corners[2], false)
-               << pointPolygonTest(scene_corners, logo_corners[3], false);
+//      qDebug() << pointPolygonTest(scene_corners, logo_corners[0], false)
+//               << pointPolygonTest(scene_corners, logo_corners[1], false)
+//               << pointPolygonTest(scene_corners, logo_corners[2], false)
+//               << pointPolygonTest(scene_corners, logo_corners[3], false);
 
       if(pointPolygonTest(scene_corners, logo_corners[0], false) == -1 ||
          pointPolygonTest(scene_corners, logo_corners[1], false) == -1 ||
@@ -154,7 +154,7 @@ bool MainWindow::match(QString objPath, QString scenePath){
          pointPolygonTest(scene_corners, logo_corners[3], false) == -1)
           match = false;
 
-      qDebug() << "AREA: " << contourArea(logo_corners);
+//      qDebug() << "AREA: " << contourArea(logo_corners);
 
       if(contourArea(logo_corners) < 100)
           match = false;
@@ -206,6 +206,7 @@ void MainWindow::on_actionRun_triggered(){
     qApp->processEvents();
 
     QDirIterator * brands = new QDirIterator(FOLDER_BRANDS);
+    QDirIterator * images;
 
     /* Counting how many images are going to be processed for the progressbar */
     int totalImages = 0;
@@ -220,6 +221,7 @@ void MainWindow::on_actionRun_triggered(){
 
     int imagesProcessed = 0;
     brands = new QDirIterator(FOLDER_BRANDS);
+    int tabIndex = -1;
 
     /* These loops try to match all the images with each logo from each brand */
     while(brands->hasNext()){
@@ -234,6 +236,7 @@ void MainWindow::on_actionRun_triggered(){
             brand[0] = brand[0].toUpper();
 
             QGridLayout * layout = new QGridLayout;
+            tabIndex++;
             ui->tabs->addTab(new QWidget(), brand);
             ui->tabs->setCurrentIndex(ui->tabs->count() - 1);
             ui->tabs->currentWidget()->setLayout(layout);
@@ -250,11 +253,10 @@ void MainWindow::on_actionRun_triggered(){
 
             while(logos.hasNext()){
                 QString logo = logos.next();
-                QDirIterator images(imagesFolder, QStringList() << "*.jpg" << "*.png");
-
-                while(images.hasNext()){
-                    QString image = images.next();
-                    qDebug() << image;
+                images = new QDirIterator(imagesFolder, QStringList() << "*.jpg" << "*.png");
+                int i=0;
+                while(images->hasNext()){
+                    QString image = images->next();
                     if(match(logo, image)){
                         QLabel * label = new QLabel();
                         QPixmap pixmap(image);
@@ -264,9 +266,8 @@ void MainWindow::on_actionRun_triggered(){
                         label->show();
                         layout->addWidget(label, imagesMatched / 4, imagesMatched % 4);
                         imagesMatched++;
-//                        qDebug() << image << logo;
-                    }else{
-//                        qDebug() << "nao achou: " << image;
+                        if(imagesMatched > 0)
+                            ui->tabs->setTabText(tabIndex, brand + " (" + QString::number(imagesMatched) + ")");
                     }
                     imagesProcessed++;
                     qDebug() << "processed: " << imagesProcessed;
