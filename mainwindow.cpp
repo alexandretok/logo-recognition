@@ -38,7 +38,7 @@ MainWindow::~MainWindow(){
 
 
 bool MainWindow::match(QString objPath, QString scenePath){
-//    qDebug() << "processando: " << scenePath;
+    qDebug() << "processando: " << scenePath;
 //    qDebug() << "logo: " << objPath;
 
     bool match = true;
@@ -162,7 +162,7 @@ bool MainWindow::match(QString objPath, QString scenePath){
       Mat tmp = imread(scenePath.toStdString(), CV_LOAD_IMAGE_COLOR);
 
       if(match){
-          qDebug() << "MATCH";
+//          qDebug() << "MATCH";
 
           //-- Draw lines between the corners (the mapped object in the scene - image_2 )
           line(tmp, logo_corners[0], logo_corners[1], Scalar(0, 255, 0), 4);
@@ -172,7 +172,7 @@ bool MainWindow::match(QString objPath, QString scenePath){
 
           return true;
       } else {
-          qDebug() << "NOT MATCH";
+//          qDebug() << "NOT MATCH";
 
           return false;
       }
@@ -270,8 +270,8 @@ void MainWindow::on_actionRun_triggered(){
                             ui->tabs->setTabText(tabIndex, brand + " (" + QString::number(imagesMatched) + ")");
                     }
                     imagesProcessed++;
-                    qDebug() << "processed: " << imagesProcessed;
-                    qDebug() << "total: " << totalImages;
+//                    qDebug() << "processed: " << imagesProcessed;
+//                    qDebug() << "total: " << totalImages;
                     ui->progressBar->setValue(100 * imagesProcessed / totalImages);
                     qApp->processEvents();
                 }
