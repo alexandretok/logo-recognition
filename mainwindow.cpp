@@ -15,73 +15,60 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->btCancel->setVisible(false);
     ui->tabs->clear();
 
-    /* Creating default folders */
+    //-- Creates default folder
     if(!QDir(FOLDER_BRANDS).exists()){
         QDir().mkdir(FOLDER_BRANDS);
     }
-
-//    match("/home/alexandre/projetos/logo-recognition/test-images/sony.jpg", "/home/alexandre/projetos/logo-recognition/test-images/camera.jpg");
-//    waitKey();
-
-//    match("/home/alexandre/projetos/logo-recognition/test-images/sony.jpg", "/home/alexandre/projetos/logo-recognition/test-images/head.jpg");
-//    waitKey();
-
-//    match("/home/alexandre/projetos/logo-recognition/test-images/sony.jpg", "/home/alexandre/projetos/logo-recognition/test-images/sony1.jpg");
-//    waitKey();
-
-//    match("/home/alexandre/projetos/logo-recognition/test-images/sony.jpg", "/home/alexandre/projetos/logo-recognition/test-images/sony2.jpg");
-//    waitKey();
 }
 
 MainWindow::~MainWindow(){
     delete ui;
 }
 
-void MainWindow::setCurrentLogoKeypoints(){
+void MainWindow::setCurrentSceneKeypoints(){
     Ptr<Feature2D> f2d = xfeatures2d::SIFT::create();
-    f2d->detect(currentLogo, currentLogoKeypoints);
+    f2d->detect(currentScene, currentSceneKeypoints);
 }
 
-void MainWindow::setCurrentLogoDescriptors(){
+void MainWindow::setCurrentSceneDescriptors(){
     Ptr<Feature2D> f2d = xfeatures2d::SIFT::create();
-    f2d->compute(currentLogo, currentLogoKeypoints, currentLogoDescriptors);
+    f2d->compute(currentScene, currentSceneKeypoints, currentSceneDescriptors);
 }
 
-void MainWindow::setCurrentLogo(QString logoPath){
-    currentLogo = imread(logoPath.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
-    setCurrentLogoKeypoints();
-    setCurrentLogoDescriptors();
+void MainWindow::setCurrentScene(QString scenePath){
+    currentScene = imread(scenePath.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
+    setCurrentSceneKeypoints();
+    setCurrentSceneDescriptors();
 }
 
 
-bool MainWindow::match(QString scenePath){
+bool MainWindow::match(QString logoPath){
     bool match = true;
 
-//    Mat currentLogo = imread(objPath.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
-    Mat scene = imread(scenePath.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img_matches;
+    Mat logo = imread(logoPath.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
+//    Mat img_matches;
 
     Ptr<Feature2D> f2d = xfeatures2d::SIFT::create();
     //-- cv::Ptr<Feature2D> f2d = xfeatures2d::SURF::create();
     //-- cv::Ptr<Feature2D> f2d = ORB::create();
 
     //-- Step 1: Detect the keypoints:
-    vector<KeyPoint> keypointsScene;
-    f2d->detect(scene, keypointsScene);
+    vector<KeyPoint> logoKeypoints;
+    f2d->detect(logo, logoKeypoints);
 
     //-- Step 2: Calculate descriptors (feature vectors)
-    Mat descriptorsScene;
-    f2d->compute(scene, keypointsScene, descriptorsScene );
+    Mat logoDescriptors;
+    f2d->compute(logo, logoKeypoints, logoDescriptors);
 
     //-- Step 3: Matching descriptor vectors using BFMatcher :
     BFMatcher matcher;
     vector<DMatch> matches;
-    matcher.match(currentLogoDescriptors, descriptorsScene, matches);
+    matcher.match(logoDescriptors, currentSceneDescriptors, matches);
 
     double max_dist = 0; double min_dist = 10000;
 
     // Quick calculation of max and min distances between keypoints
-    for( int i = 0; i < currentLogoDescriptors.rows; i++ ){
+    for( int i = 0; i < logoDescriptors.rows; i++ ){
         double dist = matches[i].distance;
         if( dist < min_dist ) min_dist = dist;
         if( dist > max_dist ) max_dist = dist;
@@ -96,7 +83,7 @@ bool MainWindow::match(QString scenePath){
     //-- PS.- radiusMatch can also be used here.
     vector< DMatch > good_matches;
 
-    for( int i = 0; i < currentLogoDescriptors.rows; i++ ){
+    for( int i = 0; i < logoDescriptors.rows; i++ ){
         if( matches[i].distance <= max(4*min_dist, 0.02)){
             good_matches.push_back( matches[i]);
         }
@@ -106,93 +93,59 @@ bool MainWindow::match(QString scenePath){
 //    imshow("img", img_matches);
 
 
-    //-- Localize the object
-      vector<Point2f> objLoc;
-      vector<Point2f> sceneLoc;
+      //-- Localize the object
+      vector<Point2f> logoLocal;
+      vector<Point2f> sceneLocal;
 
-      for(int i = 0; i < good_matches.size(); i++ ){
+      for(int i = 0; i < good_matches.size(); i++){
         //-- Get the keypoints from the good matches
-        objLoc.push_back( currentLogoKeypoints[ good_matches[i].queryIdx ].pt );
-        sceneLoc.push_back( keypointsScene[ good_matches[i].trainIdx ].pt );
+        logoLocal.push_back( logoKeypoints[ good_matches[i].queryIdx ].pt);
+        sceneLocal.push_back( currentSceneKeypoints[ good_matches[i].trainIdx ].pt);
       }
 
+      //-- This parameter needs to be adjusted
       if(good_matches.size() < 2){
-          qDebug() << "nenhum match bom";
+          qDebug() << "Not enough good matches";
           return false;
       }
 
 //      qDebug() << "good matches: " << good_matches.size();
 
-      Mat H = findHomography(objLoc, sceneLoc, RANSAC );
+      Mat H = findHomography(logoLocal, sceneLocal, RANSAC);
 
       //-- Get the corners from the image_1 ( the object to be "detected" )
-      vector<Point2f> obj_corners(4);
-      obj_corners[0] = cvPoint(0,0); obj_corners[1] = cvPoint( currentLogo.cols, 0 );
-      obj_corners[2] = cvPoint( currentLogo.cols, currentLogo.rows ); obj_corners[3] = cvPoint( 0, currentLogo.rows );
+      vector<Point2f> logoCorners(4);
+      logoCorners[0] = cvPoint(0,0); logoCorners[1] = cvPoint( logo.cols, 0 );
+      logoCorners[2] = cvPoint( logo.cols, logo.rows ); logoCorners[3] = cvPoint( 0, logo.rows );
 
-      vector<Point2f> scene_corners(4);
-      scene_corners[0] = cvPoint(0,0); scene_corners[1] = cvPoint( scene.cols, 0 );
-      scene_corners[2] = cvPoint( scene.cols, scene.rows ); scene_corners[3] = cvPoint( 0, scene.rows );
+      vector<Point2f> sceneCorners(4);
+      sceneCorners[0] = cvPoint(0,0); sceneCorners[1] = cvPoint( currentScene.cols, 0 );
+      sceneCorners[2] = cvPoint( currentScene.cols, currentScene.rows ); sceneCorners[3] = cvPoint( 0, currentScene.rows );
 
-      vector<Point2f> logo_corners(4);
+      vector<Point2f> outputCorners(4);
 
-        perspectiveTransform(obj_corners, logo_corners, H);
+      perspectiveTransform(logoCorners, outputCorners, H);
 
-//      qDebug() << "OBJ CORNERS: ";
-
-//      qDebug() << obj_corners[0].x << obj_corners[0].y;
-//      qDebug() << obj_corners[1].x << obj_corners[1].y;
-//      qDebug() << obj_corners[2].x << obj_corners[2].y;
-//      qDebug() << obj_corners[3].x << obj_corners[3].y;
-
-//      qDebug() << "SCENE CORNERS: ";
-
-//      qDebug() << logo_corners[0].x << logo_corners[0].y;
-//      qDebug() << logo_corners[1].x << logo_corners[1].y;
-//      qDebug() << logo_corners[2].x << logo_corners[2].y;
-//      qDebug() << logo_corners[3].x << logo_corners[3].y;
-
-//      qDebug() << "POINT TEST: ";
-
-//      qDebug() << pointPolygonTest(scene_corners, logo_corners[0], false)
-//               << pointPolygonTest(scene_corners, logo_corners[1], false)
-//               << pointPolygonTest(scene_corners, logo_corners[2], false)
-//               << pointPolygonTest(scene_corners, logo_corners[3], false);
-
-      if(pointPolygonTest(scene_corners, logo_corners[0], false) == -1 ||
-         pointPolygonTest(scene_corners, logo_corners[1], false) == -1 ||
-         pointPolygonTest(scene_corners, logo_corners[2], false) == -1 ||
-         pointPolygonTest(scene_corners, logo_corners[3], false) == -1)
+      //-- I don't know if this should be considered a good test
+      if(pointPolygonTest(sceneCorners, outputCorners[0], false) == -1 ||
+         pointPolygonTest(sceneCorners, outputCorners[1], false) == -1 ||
+         pointPolygonTest(sceneCorners, outputCorners[2], false) == -1 ||
+         pointPolygonTest(sceneCorners, outputCorners[3], false) == -1)
           match = false;
 
-//      qDebug() << "AREA: " << contourArea(logo_corners);
-
-      if(contourArea(logo_corners) < 100)
+      //-- This parameter needs to be adjusted
+      if(contourArea(outputCorners) < 100)
           match = false;
-
-      Mat tmp = imread(scenePath.toStdString(), CV_LOAD_IMAGE_COLOR);
 
       if(match){
-//          qDebug() << "MATCH";
-
-          //-- Draw lines between the corners (the mapped object in the scene - image_2 )
-          line(tmp, logo_corners[0], logo_corners[1], Scalar(0, 255, 0), 4);
-          line(tmp, logo_corners[1], logo_corners[2], Scalar( 0, 255, 0), 4);;
-          line(tmp, logo_corners[2], logo_corners[3], Scalar( 0, 255, 0), 4);
-          line(tmp, logo_corners[3], logo_corners[0], Scalar( 0, 255, 0), 4);
+          qDebug() << "Match";
 
           return true;
       } else {
-//          qDebug() << "NOT MATCH";
+          qDebug() << "No match";
 
           return false;
       }
-
-      //-- Show detected matches
-//      imshow("img", tmp);
-//      waitKey();
-
-      return true;
 }
 
 void MainWindow::on_actionSetImagesFolder_triggered(){
@@ -211,86 +164,104 @@ void MainWindow::on_actionRegisterLogo_triggered(){
 }
 
 void MainWindow::on_actionRun_triggered(){
+    //-- Shows progress bar and cancel button
     ui->progressBar->setVisible(true);
     ui->btCancel->setVisible(true);
+
     ui->progressBar->setValue(0);
     ui->tabs->clear();
-    qApp->processEvents();
 
-    QDirIterator * brands = new QDirIterator(FOLDER_BRANDS);
-    QDirIterator * images;
+    QDirIterator * brands;
+    QDirIterator * scenes;
 
-    /* Counting how many images are going to be processed for the progressbar */
-    int totalImages = 0;
-    int imgCount = QDir(imagesFolder).entryList(QStringList() << "*.jpg" << "*.png").size();
+    //-- Counting how many images are going to be processed (to update the progressbar accordingly)
+    brands = new QDirIterator(FOLDER_BRANDS);
+    int totalImages = 0,
+        totalLogos  = 0,
+        totalScenes = QDir(imagesFolder).entryList(QStringList() << "*.jpg" << "*.png").size();
     while(brands->hasNext()){
         QString b = brands->next();
         if(b.indexOf(QDir::separator() + QString(".")) == -1){
-            totalImages += QDir(b).entryList(QStringList() << "*.jpg" << "*.png").size();
+            totalLogos += QDir(b).entryList(QStringList() << "*.jpg" << "*.png").size();
         }
     }
-    totalImages *= imgCount;
+    totalImages = totalLogos * totalScenes;
 
     int imagesProcessed = 0;
-    brands = new QDirIterator(FOLDER_BRANDS);
-    int tabIndex = -1;
+    QMap<QString, int> tabIndex; //-- Keeps track of which tab belong to which brand
+    QMap<QString, int> imagesMatched;
 
-    /* These loops try to match all the images with each logo from each brand */
-    while(brands->hasNext()){
-        int imagesMatched = 0;
-        QString brand = brands->next();
 
-        if(brand.indexOf(QDir::separator() + QString(".")) == -1){
-            QDirIterator logos(brand, QStringList() << "*.jpg" << "*.png");
+    //-- In the following nested loops, we iterate through all the scenes and try to find
+    //-- each one of the brands' logos on them
+    scenes = new QDirIterator(imagesFolder, QStringList() << "*.jpg" << "*.png");
+    while(scenes->hasNext()){
+        QString scene = scenes->next();
 
-            /* Create new tab with brand name */
-            brand = brand.split(QDir::separator())[1];
-            brand[0] = brand[0].toUpper();
+        //-- Here, we compute the keypoints and descriptors for the current scene
+        //-- This makes the program run faster, because we only compute these once
+        setCurrentScene(scene);
 
-            QGridLayout * layout = new QGridLayout;
-            tabIndex++;
-            ui->tabs->addTab(new QWidget(), brand);
-            ui->tabs->setCurrentIndex(ui->tabs->count() - 1);
-            ui->tabs->currentWidget()->setLayout(layout);
-            layout->setColumnStretch(0, 1);
-            layout->setColumnStretch(1, 1);
-            layout->setColumnStretch(2, 1);
-            layout->setColumnStretch(3, 1);
-            layout->setRowStretch(0, 1);
-            layout->setRowStretch(1, 1);
-            layout->setRowStretch(2, 1);
-            layout->setRowStretch(3, 1);
-            layout->setRowStretch(4, 1);
-            layout->setRowStretch(5, 1);
+        brands = new QDirIterator(FOLDER_BRANDS);
 
-            while(logos.hasNext()){
-                QString logo = logos.next();
-                setCurrentLogo(logo);
+        while(brands->hasNext()){
+            QString brand = brands->next();
 
-                images = new QDirIterator(imagesFolder, QStringList() << "*.jpg" << "*.png");
+            //-- This if skips the "." and ".." directories
+            if(brand.indexOf(QDir::separator() + QString(".")) == -1){
+                imagesMatched[brand] = 0;
+                QDirIterator logos(brand, QStringList() << "*.jpg" << "*.png");
 
-                while(images->hasNext()){
-                    QString image = images->next();
-                    if(match(image)){
+                brand = brand.split(QDir::separator())[1];
+                brand[0] = brand[0].toUpper();
+
+                //-- Verifies if the current brand already has a tab associated
+                QGridLayout * layout;
+                if(!tabIndex.contains(brand)){
+                    //-- Creates a new tab for the current brand
+                    layout = new QGridLayout;
+                    ui->tabs->addTab(new QWidget(), brand);
+
+                    //-- Saves the tab index for later use
+                    tabIndex[brand] = ui->tabs->count() - 1;
+                    ui->tabs->widget(tabIndex[brand])->setLayout(layout);
+
+                    layout->setColumnStretch(0, 1);
+                    layout->setColumnStretch(1, 1);
+                    layout->setColumnStretch(2, 1);
+                    layout->setColumnStretch(3, 1);
+                    layout->setRowStretch(0, 1);
+                    layout->setRowStretch(1, 1);
+                    layout->setRowStretch(2, 1);
+                    layout->setRowStretch(3, 1);
+                    layout->setRowStretch(4, 1);
+                    layout->setRowStretch(5, 1);
+                } else {
+                    //-- If the brands already has a tab associated, just get the layout instance
+                    layout = (QGridLayout*) ui->tabs->widget(tabIndex[brand])->layout();
+                }
+
+                while(logos.hasNext()){
+                    QString logo = logos.next();
+
+                    if(match(logo)){
+                        //-- If the logo was found in the scene
                         QLabel * label = new QLabel();
-                        QPixmap pixmap(image);
+                        QPixmap pixmap(scene);
                         pixmap = pixmap.scaled(128, 128);
                         label->setStyleSheet("border: 2px solid grey;");
                         label->setPixmap(pixmap);
                         label->show();
-                        layout->addWidget(label, imagesMatched / 4, imagesMatched % 4);
-                        imagesMatched++;
-                        ui->tabs->setTabText(tabIndex, brand + " (" + QString::number(imagesMatched) + ")");
+                        layout->addWidget(label, imagesMatched[brand] / 4, imagesMatched[brand] % 4);
+                        imagesMatched[brand]++;
+                        ui->tabs->setTabText(tabIndex[brand], brand + " (" + QString::number(imagesMatched[brand]) + ")");
                     }
                     imagesProcessed++;
                     ui->progressBar->setValue(100 * imagesProcessed / totalImages);
-                    qApp->processEvents();
+                    qApp->processEvents(); //-- Allows the application to update the GUI
                 }
             }
-            if(imagesMatched)
-                layout->addWidget(new QPushButton("Export"), 1 + imagesMatched / 4, 3);
         }
     }
     ui->btCancel->setVisible(false);
-    ui->tabs->setCurrentIndex(0);
 }

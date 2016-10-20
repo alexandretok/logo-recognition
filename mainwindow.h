@@ -50,11 +50,11 @@ private:
     Settings * settings;
     bool match(QString scene);
     QString imagesFolder, brandsFolder;
-    vector<KeyPoint> currentLogoKeypoints;
-    Mat currentLogoDescriptors, currentLogo;
-    void setCurrentLogoKeypoints();
-    void setCurrentLogoDescriptors();
-    void setCurrentLogo(QString logoPath);
+    vector<KeyPoint> currentSceneKeypoints;
+    Mat currentSceneDescriptors, currentScene;
+    void setCurrentSceneKeypoints();
+    void setCurrentSceneDescriptors();
+    void setCurrentScene(QString scenePath);
 };
 
 #endif // MAINWINDOW_H
