@@ -12,6 +12,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->setupUi(this);
 
     ui->progressBar->setVisible(false);
+    ui->btCancel->setVisible(false);
     ui->tabs->clear();
 
     /* Creating default folders */
@@ -36,41 +37,51 @@ MainWindow::~MainWindow(){
     delete ui;
 }
 
+void MainWindow::setCurrentLogoKeypoints(){
+    Ptr<Feature2D> f2d = xfeatures2d::SIFT::create();
+    f2d->detect(currentLogo, currentLogoKeypoints);
+}
 
-bool MainWindow::match(QString objPath, QString scenePath){
-    qDebug() << "processando: " << scenePath;
-//    qDebug() << "logo: " << objPath;
+void MainWindow::setCurrentLogoDescriptors(){
+    Ptr<Feature2D> f2d = xfeatures2d::SIFT::create();
+    f2d->compute(currentLogo, currentLogoKeypoints, currentLogoDescriptors);
+}
 
+void MainWindow::setCurrentLogo(QString logoPath){
+    currentLogo = imread(logoPath.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
+    setCurrentLogoKeypoints();
+    setCurrentLogoDescriptors();
+}
+
+
+bool MainWindow::match(QString scenePath){
     bool match = true;
 
-    Mat obj = imread(objPath.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
+//    Mat currentLogo = imread(objPath.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
     Mat scene = imread(scenePath.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
     Mat img_matches;
-//    namedWindow("img", WINDOW_NORMAL);
 
     Ptr<Feature2D> f2d = xfeatures2d::SIFT::create();
     //-- cv::Ptr<Feature2D> f2d = xfeatures2d::SURF::create();
     //-- cv::Ptr<Feature2D> f2d = ORB::create();
 
     //-- Step 1: Detect the keypoints:
-    vector<KeyPoint> keypointsObject, keypointsScene;
-    f2d->detect(obj, keypointsObject);
+    vector<KeyPoint> keypointsScene;
     f2d->detect(scene, keypointsScene);
 
     //-- Step 2: Calculate descriptors (feature vectors)
-    Mat descriptorsObj, descriptorsScene;
-    f2d->compute(obj, keypointsObject, descriptorsObj );
+    Mat descriptorsScene;
     f2d->compute(scene, keypointsScene, descriptorsScene );
 
     //-- Step 3: Matching descriptor vectors using BFMatcher :
     BFMatcher matcher;
     vector<DMatch> matches;
-    matcher.match(descriptorsObj, descriptorsScene, matches);
+    matcher.match(currentLogoDescriptors, descriptorsScene, matches);
 
     double max_dist = 0; double min_dist = 10000;
 
     // Quick calculation of max and min distances between keypoints
-    for( int i = 0; i < descriptorsObj.rows; i++ ){
+    for( int i = 0; i < currentLogoDescriptors.rows; i++ ){
         double dist = matches[i].distance;
         if( dist < min_dist ) min_dist = dist;
         if( dist > max_dist ) max_dist = dist;
@@ -85,7 +96,7 @@ bool MainWindow::match(QString objPath, QString scenePath){
     //-- PS.- radiusMatch can also be used here.
     vector< DMatch > good_matches;
 
-    for( int i = 0; i < descriptorsObj.rows; i++ ){
+    for( int i = 0; i < currentLogoDescriptors.rows; i++ ){
         if( matches[i].distance <= max(4*min_dist, 0.02)){
             good_matches.push_back( matches[i]);
         }
@@ -101,7 +112,7 @@ bool MainWindow::match(QString objPath, QString scenePath){
 
       for(int i = 0; i < good_matches.size(); i++ ){
         //-- Get the keypoints from the good matches
-        objLoc.push_back( keypointsObject[ good_matches[i].queryIdx ].pt );
+        objLoc.push_back( currentLogoKeypoints[ good_matches[i].queryIdx ].pt );
         sceneLoc.push_back( keypointsScene[ good_matches[i].trainIdx ].pt );
       }
 
@@ -116,8 +127,8 @@ bool MainWindow::match(QString objPath, QString scenePath){
 
       //-- Get the corners from the image_1 ( the object to be "detected" )
       vector<Point2f> obj_corners(4);
-      obj_corners[0] = cvPoint(0,0); obj_corners[1] = cvPoint( obj.cols, 0 );
-      obj_corners[2] = cvPoint( obj.cols, obj.rows ); obj_corners[3] = cvPoint( 0, obj.rows );
+      obj_corners[0] = cvPoint(0,0); obj_corners[1] = cvPoint( currentLogo.cols, 0 );
+      obj_corners[2] = cvPoint( currentLogo.cols, currentLogo.rows ); obj_corners[3] = cvPoint( 0, currentLogo.rows );
 
       vector<Point2f> scene_corners(4);
       scene_corners[0] = cvPoint(0,0); scene_corners[1] = cvPoint( scene.cols, 0 );
@@ -201,6 +212,7 @@ void MainWindow::on_actionRegisterLogo_triggered(){
 
 void MainWindow::on_actionRun_triggered(){
     ui->progressBar->setVisible(true);
+    ui->btCancel->setVisible(true);
     ui->progressBar->setValue(0);
     ui->tabs->clear();
     qApp->processEvents();
@@ -210,11 +222,11 @@ void MainWindow::on_actionRun_triggered(){
 
     /* Counting how many images are going to be processed for the progressbar */
     int totalImages = 0;
-    int imgCount = QDir(imagesFolder).entryList().size() - 2;
+    int imgCount = QDir(imagesFolder).entryList(QStringList() << "*.jpg" << "*.png").size();
     while(brands->hasNext()){
         QString b = brands->next();
         if(b.indexOf(QDir::separator() + QString(".")) == -1){
-            totalImages += QDir(b).entryList().size() - 2;
+            totalImages += QDir(b).entryList(QStringList() << "*.jpg" << "*.png").size();
         }
     }
     totalImages *= imgCount;
@@ -253,11 +265,13 @@ void MainWindow::on_actionRun_triggered(){
 
             while(logos.hasNext()){
                 QString logo = logos.next();
+                setCurrentLogo(logo);
+
                 images = new QDirIterator(imagesFolder, QStringList() << "*.jpg" << "*.png");
-                int i=0;
+
                 while(images->hasNext()){
                     QString image = images->next();
-                    if(match(logo, image)){
+                    if(match(image)){
                         QLabel * label = new QLabel();
                         QPixmap pixmap(image);
                         pixmap = pixmap.scaled(128, 128);
@@ -266,20 +280,17 @@ void MainWindow::on_actionRun_triggered(){
                         label->show();
                         layout->addWidget(label, imagesMatched / 4, imagesMatched % 4);
                         imagesMatched++;
-                        if(imagesMatched > 0)
-                            ui->tabs->setTabText(tabIndex, brand + " (" + QString::number(imagesMatched) + ")");
+                        ui->tabs->setTabText(tabIndex, brand + " (" + QString::number(imagesMatched) + ")");
                     }
                     imagesProcessed++;
-//                    qDebug() << "processed: " << imagesProcessed;
-//                    qDebug() << "total: " << totalImages;
                     ui->progressBar->setValue(100 * imagesProcessed / totalImages);
                     qApp->processEvents();
                 }
             }
-
-            layout->addWidget(new QPushButton("Exportar"), 1 + imagesMatched / 4, 3);
+            if(imagesMatched)
+                layout->addWidget(new QPushButton("Export"), 1 + imagesMatched / 4, 3);
         }
     }
-
+    ui->btCancel->setVisible(false);
     ui->tabs->setCurrentIndex(0);
 }

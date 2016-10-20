@@ -48,8 +48,13 @@ private:
     Ui::MainWindow *ui;
     AddLogo * addLogo;
     Settings * settings;
-    bool match(QString obj, QString scene);
+    bool match(QString scene);
     QString imagesFolder, brandsFolder;
+    vector<KeyPoint> currentLogoKeypoints;
+    Mat currentLogoDescriptors, currentLogo;
+    void setCurrentLogoKeypoints();
+    void setCurrentLogoDescriptors();
+    void setCurrentLogo(QString logoPath);
 };
 
 #endif // MAINWINDOW_H
